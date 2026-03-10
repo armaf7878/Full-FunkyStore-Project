@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+
+/** Theme **/
+@theme {
+  /* Screens */
+  --breakpoint-sm: 20rem; /*480px*/
+  --breakpoint-md: 48rem; /*768px*/
+  --breakpoint-lg: 80rem; /*1280px*/
+  --breakpoint-xl: 87.5rem; /*1400px*/
+  --breakpoint-2xl: 96rem; /*1536px*/
+
+  /* font */
+  --font-grostek: "Space Grotesk", sans-serif;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+#root{
+  background-color: #020B0A;
+}
