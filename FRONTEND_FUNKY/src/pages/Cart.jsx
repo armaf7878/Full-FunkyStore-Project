@@ -40,8 +40,11 @@ function Cart(){
     }
 
    const onProduct = () => {
+        console.log("=== CART CHECKOUT DEBUG ===");
+        console.log("selectedProducts:", selectedProducts);
         localStorage.setItem("products_Checkout", JSON.stringify(selectedProducts));
-   }
+        console.log("products_Checkout saved:", localStorage.getItem("products_Checkout"));
+    }
 
     useEffect(() =>{
         localStorage.removeItem("products_Checkout");

@@ -4,11 +4,14 @@ const app = express();
 const port = 8000;
 const dotenv = require('dotenv');
 
-//Parse Json
-app.use(express.json());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'token']
+}));
 
-//Cors Config
-app.use(cors())
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 //Env Config
 dotenv.config();

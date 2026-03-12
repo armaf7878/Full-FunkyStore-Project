@@ -1,21 +1,36 @@
 import { useState } from "react"
 import { Account_Login } from "../app/api";
+import { useNavigate } from "react-router-dom";
 
 function LoginModal({onClose}){
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    
     const Click_Login = () => {
         if(!email || !password){
             return setError("Please fill all fields");
         }
+        setLoading(true);
+        console.log("=== LOGIN DEBUG (LoginModal) ===");
+        console.log("Email:", email);
         Account_Login(email, password)
         .then((res) => {
+            console.log("Login response:", res);
+            console.log("Token (res.data):", res.data);
             localStorage.setItem("token", res.data);
-            console.log("Login successfully");
+            console.log("Token saved to localStorage");
+            setLoading(false);
             onClose();
+            window.location.reload();
         })
-        .catch((err) =>  setError(err.response.data));
+        .catch((err) => {
+            console.error("Login error:", err);
+            setError(err.response?.data?.err || err.response?.data || "Login failed");
+            setLoading(false);
+        });
     };
 
     
@@ -48,9 +63,11 @@ function LoginModal({onClose}){
                     <div className="flex items-center justify-between">
                         <p className="text-lg font-light font-Genos text-n-300">*Forget Password</p>
                         <button 
-                            className="px-4 py-2 text-2xl cursor-pointer bg-n-300 rounded-2xl text-n-100 font-Genos hover:bg-n-300/80"
+                            className="px-4 py-2 text-2xl cursor-pointer bg-n-300 rounded-2xl text-n-100 font-Genos hover:bg-n-300/80 disabled:opacity-50"
                             onClick={Click_Login}
-                            >Login  
+                            disabled={loading}
+                            >
+                            {loading ? "..." : "Login"}  
                         </button>
                     </div>
 

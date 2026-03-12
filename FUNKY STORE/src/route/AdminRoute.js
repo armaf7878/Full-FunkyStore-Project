@@ -35,7 +35,13 @@ router.put('/product-variants/:id', adminController.updateProductVariant);
 
 
 router.put('/categories/:id', adminController.updateCategory);
+router.delete('/categories/:id', adminController.deleteCategory);
+router.get('/categories', adminController.getAllCategories);
+router.post('/categories', adminController.createCategory);
 router.get('/categories/:id/products', adminController.getCategoryProducts);
+
+router.delete('/products/:id', adminController.deleteProduct);
+router.delete('/product-variants/:id', adminController.deleteProductVariant);
 
 
 router.get('/reports/revenue', adminController.getRevenueReport);

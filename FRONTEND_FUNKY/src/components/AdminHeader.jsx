@@ -10,6 +10,7 @@ function AdminHeader() {
         {name: "Users", path: "/admin/users"},
         {name: "Orders", path: "/admin/orders"},
         {name: "Products", path: "/admin/products"},
+        {name: "Categories", path: "/admin/categories"},
         {name: "Reports", path: "/admin/reports"}
     ];
 

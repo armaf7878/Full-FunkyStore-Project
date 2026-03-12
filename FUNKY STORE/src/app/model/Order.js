@@ -33,7 +33,7 @@ const Order = new Schema({
     },
     payment_method:{
         type: String,
-        enum: ['COD', 'VNPAY'],
+        enum: ['COD', 'VNPay'],
         default: 'COD',
         required: true
     }
