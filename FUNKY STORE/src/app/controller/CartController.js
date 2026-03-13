@@ -36,6 +36,27 @@ class CartController{
         .catch((err) => res.status(500).json({err: err.message}))
     };
 
+    //[PUT] - api/cart/update-quantity
+    async updateQuantity(req, res) {
+        try {
+            const { cart_id, quantity } = req.body;
+            if (quantity < 1) {
+                return res.status(400).json({ error: "Quantity must be at least 1" });
+            }
+            const cart = await Cart.findByIdAndUpdate(
+                cart_id,
+                { quantity: quantity },
+                { new: true }
+            );
+            if (!cart) {
+                return res.status(404).json({ error: "Cart item not found" });
+            }
+            res.json({ message: "Updated quantity successfully", data: cart });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    };
+
     //[DELETE] - api/cart/delete
     delete(req, res){
         Cart.deleteOne({_id: req.body.cart_id})

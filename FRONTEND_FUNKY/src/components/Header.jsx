@@ -1,12 +1,16 @@
-import { Link } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Cart_GetCart } from "../app/api";
 import logo from "../assets/Logo.png";
 import icon_cart from "../assets/icon_cart.png";
+import LoginModal from "./LoginModal";
+import RegisterModal from "./RegisterModal";
 
 function Header(){
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const [openLogin, setOpenLogin] = useState(false);
+    const [openAuth, setOpenAuth] = useState(false);
+    const [authMode, setAuthMode] = useState("login"); // "login" or "register"
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -20,21 +24,34 @@ function Header(){
         window.location.href = "/";
     };
 
+    const navLinkClass = ({ isActive }) => 
+        `text-xl font-Jaro transition-all duration-300 relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-p-50 after:transition-transform after:duration-300 ${
+            isActive ? "text-p-50 after:scale-x-100" : "text-n-50 hover:text-n-100 after:scale-x-0"
+        }`;
+
     return(
     <>
-        <section id="Header" className="absolute top-0 z-50 flex items-center justify-between w-full h-20 pt-2 ">
+        <section id="Header" className="absolute top-0 z-50 flex items-center justify-between w-full h-20 pt-2 px-8">
             <div className="flex items-center h-full">
-                <img src={logo} alt="logo" className="object-contain h-full cursor-pointer"/>
-                <Link to='/' className="text-2xl font-Jaro text-n-100">Funky Store</Link>
+                <Link to='/' className="flex items-center h-full">
+                    <img src={logo} alt="logo" className="object-contain h-full cursor-pointer"/>
+                    <span className="text-2xl font-Jaro text-n-100 ml-2">Funky Store</span>
+                </Link>
             </div>
 
-            <div className="flex items-center mr-4 gap-x-4">
-                <Link to='/' className="text-xl font-Jaro text-n-100">Home</Link>
-                <Link to='/order' className="text-xl font-Jaro text-n-50">Order</Link>
-                <Link to='/collection' className="text-xl font-Jaro text-n-50">Collection</Link>
-                <Link to='/shop' className="text-xl font-Jaro text-n-50">Shop</Link>
-                <Link to='/cart'>
-                    <img src={icon_cart} alt="Find a item" className="scale-70"/>
+            <div className="flex items-center gap-x-8">
+                <nav className="flex items-center gap-x-6">
+                    <NavLink to='/' className={navLinkClass}>Home</NavLink>
+                    <NavLink to='/order' className={navLinkClass}>Order</NavLink>
+                    <NavLink to='/collection' className={navLinkClass}>Collection</NavLink>
+                    <NavLink to='/shop' className={navLinkClass}>Shop</NavLink>
+                </nav>
+                
+                <Link to='/cart' className="relative hover:scale-110 transition-transform">
+                    <img src={icon_cart} alt="Find a item" className="w-8 h-8"/>
+                    {isLoggedIn && (
+                        <CartBadge />
+                    )}
                 </Link>
                 
                 {isLoggedIn ? (
@@ -67,7 +84,10 @@ function Header(){
                     </div>
                 ) : (
                     <button 
-                        onClick={() => setOpenLogin(true)}
+                        onClick={() => {
+                            setAuthMode("login");
+                            setOpenAuth(true);
+                        }}
                         className="text-xl font-Jaro text-n-50 hover:text-n-100"
                     >
                         Login
@@ -76,87 +96,50 @@ function Header(){
                 
             </div>
         </section> 
-        {openLogin && (
+        {openAuth && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-                <LoginModalWrapper onClose={() => setOpenLogin(false)} setIsLoggedIn={setIsLoggedIn} />
+                {authMode === "login" ? (
+                    <LoginModal 
+                        onClose={() => setOpenAuth(false)} 
+                        onSwitchToRegister={() => setAuthMode("register")}
+                    />
+                ) : (
+                    <RegisterModal 
+                        onClose={() => setOpenAuth(false)} 
+                        onSwitchToLogin={() => setAuthMode("login")}
+                    />
+                )}
             </div>
         )}
     </>
     )
 }
 
-function LoginModalWrapper({ onClose, setIsLoggedIn }) {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+const CartBadge = () => {
+    const [count, setCount] = useState(0);
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            return setError("Please fill all fields");
-        }
-        setLoading(true);
-        console.log("=== LOGIN DEBUG ===");
-        console.log("API URL:", `${import.meta.env.VITE_API_URL}/user/login`);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/user/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await res.json();
-            console.log("Login response status:", res.status);
-            console.log("Login response data:", data);
-            if (res.ok) {
-                console.log("Token to save:", data.data);
-                localStorage.setItem("token", data.data);
-                setIsLoggedIn(true);
-                onClose();
-                window.location.reload();
-            } else {
-                setError(data.err || "Login failed");
-            }
-        } catch (err) {
-            console.error("Login error:", err);
-            setError("Connection error");
-        }
-        setLoading(false);
+    const updateCount = () => {
+        Cart_GetCart()
+            .then(res => {
+                const total = Array.isArray(res) ? res.reduce((acc, item) => acc + item.quantity, 0) : 0;
+                setCount(total);
+            })
+            .catch(() => setCount(0));
     };
 
-    return (
-        <div className="flex flex-col justify-around w-auto gap-4 p-8 h-84 bg-n-50 border border-n-200 rounded-xl">
-            <p 
-                className="text-2xl font-medium text-right cursor-pointer font-Genos text-n-300"
-                onClick={onClose}
-            >X</p>
-            <p className="text-3xl font-medium font-Genos text-n-100 text-center">Sign In</p>
-            <input 
-                className="w-full h-12 px-4 font-light bg-n-300 rounded-2xl text-n-100 font-Genos"
-                placeholder="Email..."
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-            />
-            <input 
-                className="w-full h-12 px-4 font-light bg-n-300 rounded-2xl text-n-100 font-Genos"
-                placeholder="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-            />
-            <div className="flex items-center justify-between">
-                <p className="text-lg font-light font-Genos text-n-300 cursor-pointer">Forgot Password?</p>
-                <button 
-                    className="px-6 py-2 text-2xl cursor-pointer bg-n-300 rounded-2xl text-n-100 font-Genos hover:bg-n-300/80 disabled:opacity-50"
-                    onClick={handleLogin}
-                    disabled={loading}
-                >
-                    {loading ? "..." : "Login"}  
-                </button>
-            </div>
-            {error && <p className="font-light text-red-500 text-md font-Genos">{error}</p>}
-        </div>
-    );
-}
+    useEffect(() => {
+        updateCount();
+        const interval = setInterval(updateCount, 5000); // 5s update
+        return () => clearInterval(interval);
+    }, []);
 
-export default Header
+    if (count === 0) return null;
+
+    return (
+        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-p-50 text-[10px] font-extrabold text-n-300 shadow-lg ring-2 ring-n-300 animate-pulse">
+            {count}
+        </span>
+    );
+};
+
+export default Header;

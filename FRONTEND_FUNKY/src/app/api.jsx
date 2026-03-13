@@ -13,6 +13,12 @@ const Account_Login = async(email, password) => {
     .catch((err) => {throw err});
 }; export {Account_Login}
 
+const Account_Register = async(fullname, email, password, phone) => {
+    return axios.post(`${ACCOUNT}/create`, {fullname, email, password, phone})
+    .then((res) => res.data)
+    .catch((err) => {throw err});
+}; export {Account_Register}
+
 
 const Product_ShowAll = async() =>{
     return axios.get(`${PRODUCT_API}/showall`)
@@ -61,6 +67,12 @@ const Cart_Delete = async(cart_id) => {
     .then((res) => res.data)
     .catch((err) => {throw err})
 }; export {Cart_Delete}
+
+const Cart_UpdateQuantity = async(cart_id, quantity) => {
+    return axiosClient.put(`${CART}/update-quantity`, { cart_id, quantity })
+    .then((res) => res.data)
+    .catch((err) => {throw err})
+}; export {Cart_UpdateQuantity}
 
 const Order_Create = async(order_address, payment_method, order_phone, products) => {
     return axiosClient.post(`${ORDER}/create`, {order_address, payment_method, order_phone, products})

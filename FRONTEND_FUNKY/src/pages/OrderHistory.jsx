@@ -57,6 +57,20 @@ function OrderHistory() {
 
     useEffect(() => {
         loadOrders();
+        
+        // Check for VNPay response in URL
+        const query = new URLSearchParams(window.location.search);
+        const success = query.get('success');
+        const orderId = query.get('orderId');
+        
+        if (success === 'true') {
+            alert(`Payment successful for Order #${orderId?.slice(-6)}!`);
+            // Clear URL params without refreshing
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (success === 'false') {
+            alert('Payment failed or was canceled.');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }, []);
 
     const handleViewDetail = async (order) => {

@@ -166,6 +166,9 @@ class OrderController {
         try{
 
             const {orderId, amount} = req.body;
+            console.log("=== VNPAY CREATE DEBUG ===");
+            console.log("OrderId:", orderId);
+            console.log("Amount (USD):", amount);
 
             const order = await Order.findOne({
                 _id: orderId,
@@ -184,57 +187,81 @@ class OrderController {
             const vnp_Url = process.env.VNP_URL;
             const vnp_ReturnUrl = process.env.VNP_RETURN_URL;
 
-            const createDate = moment().format("YYYYMMDDHHmmss");
-            const expireDate = moment().add(15,'minutes').format("YYYYMMDDHHmmss");
+            if (!vnp_TmnCode || !vnp_HashSecret) {
+                console.error("VNPAY Error: VNP_TMN_CODE or VNP_HASH_SECRET is missing in .env");
+                return res.status(500).json({
+                    success: false,
+                    message: "VNPay configuration is missing"
+                });
+            }
+
+            const orderDetails = await OrderDetail.find({ order_id: orderId });
+            if (!orderDetails || orderDetails.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Order details not found"
+                });
+            }
+
+            const totalAmountVnd = orderDetails.reduce((sum, item) => {
+                return sum + Number(item.total_price || 0);
+            }, 0);
+
+            const date = new Date();
+            const createDate = moment(date).format('YYYYMMDDHHmmss');
+            const expireDate = moment(date).add(15, 'minutes').format('YYYYMMDDHHmmss');
+
+            const VND_RATE = 25000;
+            const amountVnd = totalAmountVnd * VND_RATE;
 
             let vnp_Params = {
-
-                vnp_Version:"2.1.0",
-                vnp_Command:"pay",
-                vnp_TmnCode:vnp_TmnCode,
-                vnp_Locale:"vn",
-                vnp_CurrCode:"VND",
-
-                vnp_TxnRef:orderId,
-                vnp_OrderInfo:`Thanh toan don hang ${orderId}`,
-                vnp_OrderType:"other",
-
-                vnp_Amount:amount*100,
-
-                vnp_ReturnUrl:vnp_ReturnUrl,
-
-                vnp_IpAddr:"127.0.0.1",
-
-                vnp_CreateDate:createDate,
-                vnp_ExpireDate:expireDate
-
+                "vnp_Version": "2.1.0",
+                "vnp_Command": "pay",
+                "vnp_TmnCode": vnp_TmnCode,
+                "vnp_Locale": "vn",
+                "vnp_CurrCode": "VND",
+                "vnp_TxnRef": orderId,
+                "vnp_OrderInfo": "Thanh_toan_don_hang_" + orderId,
+                "vnp_OrderType": "other",
+                "vnp_Amount": Math.round(amountVnd) * 100,
+                "vnp_ReturnUrl": vnp_ReturnUrl,
+                "vnp_IpAddr": "127.0.0.1",
+                "vnp_CreateDate": createDate,
+                "vnp_ExpireDate": expireDate
             };
 
-            const sortedParams = {};
-            Object.keys(vnp_Params)
-            .sort()
-            .forEach(key=>{
-                sortedParams[key]=vnp_Params[key];
-            });
+            // 1. Sắp xếp tham số alphabetically (A-Z)
+            function sortObject(obj) {
+                let sorted = {};
+                let str = [];
+                let key = Object.keys(obj).sort();
+                for (let i = 0; i < key.length; i++) {
+                    sorted[key[i]] = obj[key[i]];
+                }
+                return sorted;
+            }
 
-            const signData = qs.stringify(sortedParams,{encode:false});
+            const sortedParams = sortObject(vnp_Params);
 
-            const hmac = crypto.createHmac(
-                "sha512",
-                vnp_HashSecret
-            );
+            // 2. Tạo chuỗi ký (SignData) từ giá trị ENCODED
+            const signData = Object.keys(sortedParams)
+                .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(sortedParams[key]).replace(/%20/g, "+")}`)
+                .join('&');
 
-            const secureHash = hmac
-            .update(signData,'utf-8')
-            .digest("hex");
+            // 3. Tạo SecureHash (HMAC-SHA512)
+            const hmac = crypto.createHmac("sha512", vnp_HashSecret);
+            const secureHash = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+            
+            console.log("=== VNPAY CREATE DEBUG ===");
+            console.log("SignData (RAW):", signData);
+            console.log("SecureHash:", secureHash);
 
-            sortedParams['vnp_SecureHash']=secureHash;
-
-            const paymentUrl =
-            vnp_Url + "?" + qs.stringify(sortedParams,{encode:true});
+            // 4. Tạo URL với giá trị đã mã hóa
+            const queryParams = qs.stringify(sortedParams, { encode: true });
+            const paymentUrl = vnp_Url + "?" + queryParams + "&vnp_SecureHash=" + secureHash;
 
             res.json({
-                success:true,
+                success: true,
                 paymentUrl
             });
 
@@ -264,29 +291,32 @@ class OrderController {
             delete vnp_Params['vnp_SecureHash'];
             delete vnp_Params['vnp_SecureHashType'];
 
-            const sortedParams={};
+            function sortObject(obj) {
+                let sorted = {};
+                let str = [];
+                let key = Object.keys(obj).sort();
+                for (let i = 0; i < key.length; i++) {
+                    sorted[key[i]] = obj[key[i]];
+                }
+                return sorted;
+            }
 
-            Object.keys(vnp_Params)
-            .sort()
-            .forEach(key=>{
-                sortedParams[key]=vnp_Params[key];
-            });
+            const sortedParams = sortObject(vnp_Params);
+            const signData = Object.keys(sortedParams)
+                .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(sortedParams[key]).replace(/%20/g, "+")}`)
+                .join('&');
 
-            const signData = qs.stringify(sortedParams,{encode:false});
-
-            const hmac = crypto.createHmac(
-                "sha512",
-                process.env.VNP_HASH_SECRET
-            );
-
-            const checkHash = hmac
-            .update(signData,'utf-8')
-            .digest("hex");
+            const hmac = crypto.createHmac("sha512", process.env.VNP_HASH_SECRET);
+            const checkHash = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
 
             const orderId = vnp_Params['vnp_TxnRef'];
             const responseCode = vnp_Params['vnp_ResponseCode'];
 
-            if(secureHash===checkHash && responseCode==="00"){
+            console.log("=== VNPAY CALLBACK DEBUG ===");
+            console.log("CalculatedHash:", checkHash);
+            console.log("ExpectedHash:", secureHash);
+
+            if (secureHash.toLowerCase() === checkHash.toLowerCase() && responseCode === "00") {
 
                 await Order.findByIdAndUpdate(
                     orderId,
@@ -294,13 +324,12 @@ class OrderController {
                 );
 
                 return res.redirect(
-                    `${process.env.VNP_RETURN_URL}?success=true&orderId=${orderId}`
+                    `${process.env.FRONTEND_URL}/order/history?success=true&orderId=${orderId}`
                 );
-
             }
 
             return res.redirect(
-                `${process.env.VNP_RETURN_URL}?success=false&orderId=${orderId}`
+                `${process.env.FRONTEND_URL}/order/history?success=false&orderId=${orderId}`
             );
 
         }
@@ -309,7 +338,7 @@ class OrderController {
             console.error(err);
 
             res.redirect(
-                `${process.env.VNP_RETURN_URL}?success=false`
+                `${process.env.FRONTEND_URL}/order/history?success=false`
             );
 
         }

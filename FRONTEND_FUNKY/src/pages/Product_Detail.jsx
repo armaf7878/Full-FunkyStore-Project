@@ -1,5 +1,6 @@
 import Hoodie from "../assets/Hodie/hoodie_1.png"
 import LoginModal from "../components/LoginModal";
+import RegisterModal from "../components/RegisterModal";
 import { Product_ShowAll } from "../app/api";
 import { Product_GetProduct } from "../app/api"
 import { Cart_AddTo } from "../app/api";
@@ -10,38 +11,80 @@ function Product_Detail(){
     const {id} = useParams()
     const [product, setProduct] = useState([]);
     const [allProduct, setAllProduct] = useState([]);
+    const [selectedColor, setSelectedColor] = useState("");
+    const [selectedSize, setSelectedSize] = useState("");
     const [chooseProduct, setChooseProduct] = useState("");
-    const [openLogin, setOpenLogin] = useState(false);
-    const choose_product_variable = (productVariable_id) => {
-        setChooseProduct(productVariable_id);
+    const [quantity, setQuantity] = useState(1);
+    const [openAuth, setOpenAuth] = useState(false);
+    const [authMode, setAuthMode] = useState("login");
+
+    const colors = [...new Set(product.map(v => v.color))];
+    const availableSizes = product
+        .filter(v => v.color === selectedColor)
+        .map(v => v.size);
+
+    useEffect(() => {
+        if (product.length > 0) {
+            if (!selectedColor) setSelectedColor(product[0].color);
+            if (!selectedSize && availableSizes.length > 0) {
+                const firstAvailable = product.find(v => v.color === selectedColor && v.stock > 0);
+                if (firstAvailable) {
+                    setSelectedSize(firstAvailable.size);
+                    setChooseProduct(firstAvailable._id);
+                }
+            }
+        }
+    }, [product, selectedColor]);
+
+    const handleSelectColor = (color) => {
+        setSelectedColor(color);
+        const sizesForColor = product.filter(v => v.color === color);
+        const firstAvailable = sizesForColor.find(v => v.stock > 0);
+        if (firstAvailable) {
+            setSelectedSize(firstAvailable.size);
+            setChooseProduct(firstAvailable._id);
+        } else {
+            setSelectedSize("");
+            setChooseProduct("");
+        }
     }
 
-    const add_to_cart = () => {
+    const handleSelectSize = (size) => {
+        setSelectedSize(size);
+        const variant = product.find(v => v.color === selectedColor && v.size === size);
+        if (variant) {
+            setChooseProduct(variant._id);
+        }
+    }
+
+    const add_to_cart = (redirect = false) => {
         if(!chooseProduct){
             return alert("Hey yo, i can't get your size bro !");
         };
-        const quantity = 1;
 
         Cart_AddTo(chooseProduct, quantity)
-        .then((res) => alert("I throw one more items in your cart, bro!"))
-        .catch((err) => {
-            if(err.response.data.err == "You are not authenticated !"){
-                setOpenLogin(true);
+        .then((res) => {
+            if (redirect) {
+                window.location.href = "/cart";
+            } else {
+                alert("I throw one more items in your cart, bro!");
             }
-            if(err.response.data.err == "Token is not valid"){
+        })
+        .catch((err) => {
+            if(err.response?.data?.err == "You are not authenticated !"){
+                setOpenAuth(true);
+            }
+            else if(err.response?.data?.err == "Token is not valid"){
                 alert("Token expired, please login again !");
-                setOpenLogin(true);
+                setOpenAuth(true);
             }
             else{
-                alert(err.response.data.err);
+                alert(err.response?.data?.err || "Something went wrong, bro!");
             }
         });
     };
 
-    
     const loadProduct = async(id) => {
-        console.log("come here");
-
         await Product_GetProduct(id)
         .then((product) => setProduct(product))
         .catch((err) => console.log(err))
@@ -58,12 +101,31 @@ function Product_Detail(){
         load_AllProduct();
     }, [id])
     
-    if (product.length == 0) return <div>Loading...</div>;
+    if (product.length == 0) return <div className="flex items-center justify-center w-full h-screen text-2xl font-Genos text-n-100">Loading...</div>;
+
+    const currentVariant = product.find(v => v._id === chooseProduct) || product[0];
+
     return(
         <>
             <section id="page-2" className="relative w-full h-screen pt-20 ">
-                {openLogin?<LoginModal onClose = {() => setOpenLogin(false)}/>:''}
-                <p id="product_name" className="w-full pl-8 pr-8 text-5xl font-medium text-center font-Genos text-n-100">{product[0].productId.product_Name}</p>
+                {openAuth && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        {authMode === "login" ? (
+                            <LoginModal 
+                                onClose={() => setOpenAuth(false)} 
+                                onSwitchToRegister={() => setAuthMode("register")}
+                            />
+                        ) : (
+                            <RegisterModal 
+                                onClose={() => setOpenAuth(false)} 
+                                onSwitchToLogin={() => setAuthMode("login")}
+                            />
+                        )}
+                    </div>
+                )}
+                
+                <p id="product_name" className="w-full pl-8 pr-8 text-5xl font-medium text-center font-Genos text-n-100 uppercase tracking-widest">{product[0].productId.product_Name}</p>
+                
                 <div className="flex items-center justify-between h-full pl-8 pr-8">
                     <div id="page-count" className="flex flex-col gap-4 w-30">
                         <div className="w-23 h-1.25 rounded-2xl bg-n-50"></div>
@@ -71,52 +133,110 @@ function Product_Detail(){
                         <div className="w-23 h-1.25 rounded-2xl bg-n-50"></div>
                         <div className="w-23 h-1.25 rounded-2xl bg-n-50"></div>
                     </div>
-                    <img src={product[0].productId.image[0]} className="object-contain w-auto h-full"/>
-                    <div id="Buy_NewArrival"  className="flex items-center h-150">
-                        
-                        <div className="flex flex-col justify-around gap-4 p-4 h-130 w-90 rounded-2xl bg-n-200">
-                            <p className="text-3xl font-medium font-Genos text-n-100">COLOR</p>
-                            <div className="flex w-full h-[5px] items-center justify-between">
-                                <div className="w-[25%] h-full bg-n-50 rounded-2xl"></div>
-                                <div className="w-[25%] h-full bg-p-50 rounded-2xl"></div>
-                                <div className="w-[25%] h-full bg-n-300 rounded-2xl"></div>
-                            </div>
 
-                            <p className="text-3xl font-medium font-Genos text-n-100">SIZE</p>
-                            <div className="flex justify-around w-full">{
-                                product.map((product_variable) => (
-                                    <button  
-                                        key={product_variable._id} 
-                                        disabled={product_variable.stock == 0}
-                                        onClick={ () => choose_product_variable(product_variable._id)}
-                                        className= {`text-2xl rounded-full cursor-pointer font-Genos size-16 text-n-100 hover:bg-n-50 border-3 border-n-100 ${product_variable.stock === 0 ? "bg-gray-300 text-gray-500 hover:cursor-not-allowed opacity-50" : "text-n-100 hover:bg-n-50"} ${chooseProduct == product_variable._id ? "bg-n-300" : "text-n-100 hover:bg-n-50"} `}>
-                                        {product_variable.size}
-                                    </button>
-                                ))
-                            }
-                            </div>
+                    <div className="relative flex items-center justify-center w-full h-full max-w-2xl">
+                        <img 
+                            src={product[0].productId.image[0]} 
+                            className="object-contain w-full h-auto max-h-[70vh] drop-shadow-[0_20px_50px_rgba(255,255,255,0.1)] transition-transform duration-500 hover:scale-105"
+                            alt={product[0].productId.product_Name}
+                        />
+                    </div>
 
-                            <p className="text-3xl font-medium font-Genos text-n-100">MATERIAL</p>
-                            <p className="w-full pl-4 font-light text-24 font-Genos text-n-100">{product[0].productId.description}</p>
-                            <div className="flex items-center justify-around">
-                                <p className="text-6xl font-extrabold font-Genos text-n-100">{product[0].price}$</p>
-
-                                <div className="flex flex-col gap-4 ">
-                                    <p 
-                                        className="px-4 py-2 text-xl font-light rounded-lg cursor-pointer bg-n-50 font-Genos text-n-100 hover:bg-n-50/80"
-                                        onClick={() => add_to_cart()}
-                                        >Add To Cart
-                                    </p>
-                                    <p className="px-4 py-2 text-2xl font-light rounded-lg cursor-pointer font-Genos text-n-100 bg-n-200 hover:bg-n-200/80">Buy Now</p>
+                    <div id="Buy_NewArrival" className="flex items-center">
+                        <div className="flex flex-col gap-6 p-8 w-100 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
+                            {/* Color Selection */}
+                            <div>
+                                <p className="mb-3 text-xl font-medium tracking-wider font-Genos text-n-100/60 uppercase">COLOR</p>
+                                <div className="flex flex-wrap gap-3">
+                                    {colors.map((color) => (
+                                        <button
+                                            key={color}
+                                            onClick={() => handleSelectColor(color)}
+                                            className={`px-4 py-1.5 rounded-full border-2 font-Genos text-lg transition-all ${
+                                                selectedColor === color 
+                                                ? "bg-p-50 border-p-50 text-n-300 shadow-[0_0_15px_rgba(var(--p-50-rgb),0.5)]" 
+                                                : "border-white/20 text-n-100 hover:border-white/40 bg-white/5"
+                                            }`}
+                                        >
+                                            {color}
+                                        </button>
+                                    ))}
                                 </div>
-                                
                             </div>
-                            
+
+                            {/* Size Selection */}
+                            <div>
+                                <p className="mb-3 text-xl font-medium tracking-wider font-Genos text-n-100/60 uppercase">SIZE</p>
+                                <div className="grid grid-cols-4 gap-3">
+                                    {product.filter(v => v.color === selectedColor).map((v) => (
+                                        <button
+                                            key={v._id}
+                                            disabled={v.stock === 0}
+                                            onClick={() => handleSelectSize(v.size)}
+                                            className={`h-12 flex items-center justify-center rounded-xl border-2 font-Genos text-xl transition-all ${
+                                                v.stock === 0 
+                                                ? "opacity-30 cursor-not-allowed border-white/5 text-n-100/30" 
+                                                : selectedSize === v.size
+                                                    ? "bg-white text-n-300 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                                                    : "border-white/20 text-n-100 hover:border-white/40 hover:bg-white/5"
+                                            }`}
+                                        >
+                                            {v.size}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Quantity Selector */}
+                            <div>
+                                <p className="mb-3 text-xl font-medium tracking-wider font-Genos text-n-100/60 uppercase">QUANTITY</p>
+                                <div className="flex items-center gap-4 bg-white/5 rounded-xl border border-white/10 p-1 w-fit">
+                                    <button 
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className="w-10 h-10 flex items-center justify-center text-2xl text-n-100 hover:bg-white/10 rounded-lg transition-colors border border-transparent"
+                                    >
+                                        −
+                                    </button>
+                                    <span className="w-8 text-center text-xl font-Genos text-n-100">{quantity}</span>
+                                    <button 
+                                        onClick={() => setQuantity(Math.min(currentVariant.stock, quantity + 1))}
+                                        className="w-10 h-10 flex items-center justify-center text-2xl text-n-100 hover:bg-white/10 rounded-lg transition-colors border border-transparent"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Price and Actions */}
+                            <div className="pt-4 mt-2 border-t border-white/10">
+                                <div className="flex items-end justify-between mb-6">
+                                    <p className="text-xl font-Genos text-n-100/60 font-light">Price</p>
+                                    <p className="text-5xl font-extrabold font-Genos text-p-50 drop-shadow-[0_0_10px_rgba(var(--p-50-rgb),0.3)]">${currentVariant.price}</p>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <button 
+                                        onClick={() => add_to_cart(false)}
+                                        className="group relative h-14 w-full flex items-center justify-center gap-3 overflow-hidden rounded-xl bg-p-50 font-Genos text-2xl font-medium text-n-300 transition-all hover:bg-p-50/90 active:scale-95 shadow-lg shadow-p-50/20"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform group-hover:-translate-y-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        ADD TO CART
+                                    </button>
+                                    <button 
+                                        onClick={() => add_to_cart(true)}
+                                        className="h-14 w-full flex items-center justify-center rounded-xl border border-white/20 bg-white/5 font-Genos text-2xl font-light text-n-100 transition-all hover:bg-white/10 hover:border-white/40 active:scale-95"
+                                    >
+                                        BUY NOW
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                
                 </div>
-            </section>  
+            </section>
+  
 
             <section id="relative-items" className="w-full h-auto pt-20 pl-8 pr-8">
                 <div className="flex items-center justify-between">
