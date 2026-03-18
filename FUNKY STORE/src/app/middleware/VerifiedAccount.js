@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 dotenv.config();
 class VerifiedAccount{
-    verifyToken = (req, res, next, admin) => {
+    verifyToken = (req, res, next) => {
         console.log("2")
         const token = req.headers.token;
         if(token){
@@ -12,10 +12,10 @@ class VerifiedAccount{
                     return res.status(403).json({err: "Token is not valid"});
                 }
                 req.user = user;
-                if(admin){
-                    return;
+                if(req.user.role == "end_user"){
+                    next();
                 }
-                next();
+                return;
             })
         }
         else{
@@ -24,8 +24,7 @@ class VerifiedAccount{
     };
 
     verifyTokenAndAdmin = (req, res, next) =>{
-        const admin = true;
-        this.verifyToken(req, res, next, admin);
+        this.verifyToken(req, res, next);
         if(req.user.role == 'admin'){
             console.log("1")
             next();
