@@ -7,6 +7,7 @@ import Order from "../pages/Order";
 import Product_Detail from "../pages/Product_Detail";
 import Cart from "../pages/Cart";
 import Product_Category from "../pages/Product_Category";
+import OrderHistory from "../pages/OrderHistory";
 // --------------------------
 import Admin from "../Admin";
 import Dashboard from "../pages/admin/Dashboard";
@@ -14,6 +15,7 @@ import Products from "../pages/admin/Products.";
 import Users from "../pages/admin/Users";
 import Orders from "../pages/admin/Orders";
 import Reports from "../pages/admin/Reports";
+import Categories from "../pages/admin/Categories";
 export const router = createBrowserRouter([
     {
         path:"/",
@@ -26,7 +28,7 @@ export const router = createBrowserRouter([
             {path: "collection", element:<Collection/>},
             {path:"order", element:<Order/>},
             {path:"cart", element:<Cart/>},
-            
+            {path:"order/history", element:<OrderHistory/>},
         ]
     },
 
@@ -38,6 +40,7 @@ export const router = createBrowserRouter([
             {path:"users", element:<Users/>},
             {path:"orders", element:<Orders/>},
             {path:"products", element:<Products/>},
+            {path:"categories", element:<Categories/>},
             {path:"reports", element:<Reports/>},
         ]
     }

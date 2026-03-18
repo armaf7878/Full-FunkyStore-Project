@@ -854,6 +854,108 @@ class AdminController {
             res.status(500).json({success: false, error: err.message});
         }
     }
+
+    //[POST] - /api/admin/categories
+    async createCategory(req, res) {
+        try {
+            const {Cate_Name} = req.body;
+            
+            if (!Cate_Name) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Category name is required'
+                });
+            }
+            
+            const existingCategory = await Category.findOne({Cate_Name});
+            if (existingCategory) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Category already exists'
+                });
+            }
+            
+            const category = new Category({Cate_Name});
+            await category.save();
+            
+            res.json({
+                success: true,
+                message: 'Category created successfully',
+                data: category
+            });
+            
+        } catch (err) {
+            res.status(500).json({success: false, error: err.message});
+        }
+    }
+
+    //[DELETE] - /api/admin/products/:id
+    async deleteProduct(req, res) {
+        try {
+            const product = await Product.findById(req.params.id);
+            
+            if (!product) {
+                return res.status(404).json({success: false, message: 'Product not found'});
+            }
+            
+            await ProductDetail.deleteMany({productId: req.params.id});
+            await Product.findByIdAndDelete(req.params.id);
+            
+            res.json({success: true, message: 'Product deleted successfully'});
+            
+        } catch (err) {
+            res.status(500).json({success: false, error: err.message});
+        }
+    }
+
+    //[DELETE] - /api/admin/product-variants/:id
+    async deleteProductVariant(req, res) {
+        try {
+            const variant = await ProductDetail.findById(req.params.id);
+            
+            if (!variant) {
+                return res.status(404).json({success: false, message: 'Product variant not found'});
+            }
+            
+            await ProductDetail.findByIdAndDelete(req.params.id);
+            
+            res.json({success: true, message: 'Product variant deleted successfully'});
+            
+        } catch (err) {
+            res.status(500).json({success: false, error: err.message});
+        }
+    }
+
+    //[DELETE] - /api/admin/categories/:id
+    async deleteCategory(req, res) {
+        try {
+            const category = await Category.findByIdAndDelete(req.params.id);
+            
+            if (!category) {
+                return res.status(404).json({success: false, message: 'Category not found'});
+            }
+            
+            res.json({success: true, message: 'Category deleted successfully'});
+            
+        } catch (err) {
+            res.status(500).json({success: false, error: err.message});
+        }
+    }
+
+    //[GET] - /api/admin/categories
+    async getAllCategories(req, res) {
+        try {
+            const categories = await Category.find().sort({createdAt: -1});
+            
+            res.json({
+                success: true,
+                data: categories
+            });
+            
+        } catch (err) {
+            res.status(500).json({success: false, error: err.message});
+        }
+    }
 }
 
 module.exports = new AdminController();

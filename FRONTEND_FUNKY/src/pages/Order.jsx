@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
-import { Product_Get1Variable, Order_Create } from "../app/api";
-useState
-function Home(){
-    const [method, setMethod] = useState("");
+import { Product_Get1Variable, Order_Create, VNPay_CreatePayment } from "../app/api";
+
+function Order() {
+    const [method, setMethod] = useState("COD");
     const [products, setProducts] = useState([]);
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [address, setAddress] = useState("");
+    const [loading, setLoading] = useState(false);
     
     const checkout_products = JSON.parse(localStorage.getItem("products_Checkout")) || [];
+    
+    console.log("=== ORDER PAGE DEBUG ===");
+    console.log("products_Checkout from localStorage:", localStorage.getItem("products_Checkout"));
+    console.log("checkout_products:", checkout_products);
     
     const loadProducts = async () => {
         try {
@@ -18,7 +23,6 @@ function Home(){
 
             for(let i =0; i<results.length; i++){
                 results[i][0]['quantity'] = checkout_products[i][1];
-                console.log(results[i])
             }
             
             setProducts(results);
@@ -27,23 +31,56 @@ function Home(){
         }
     };
 
-    const onOrder = () => {
+    const onOrder = async () => {
         if(address == "" || method =="" || phone == ""){
             return alert("Please Fill Full Information");
         }
-        Order_Create(address, method, phone, checkout_products)
-        .then((res) => {
-            alert(res.message);
-            window.location.href = "/";
-            localStorage.removeItem("products_Checkout");
-        })
-        .catch((err) => {
-            console.log(err.response);
-            if(err.response.data.error != null){
-                alert(err.response.data.error)
+        
+        if(products.length === 0) {
+            return alert("No products in cart");
+        }
+
+        setLoading(true);
+        
+        try {
+            const orderRes = await Order_Create(address, method, phone, checkout_products);
+            console.log("Order created:", orderRes);
+            
+            const orderId = orderRes.orderId;
+            const totalAmount = orderRes.total_amount;
+            
+            // Nếu chọn VNPay, tạo thanh toán VNPay
+            if (method === "VNPay" && orderId) {
+                alert("Order created! Redirecting to VNPay...");
+                
+                try {
+                    const vnpayRes = await VNPay_CreatePayment(totalAmount, orderId);
+                    console.log("VNPay response:", vnpayRes);
+                    
+                    if (vnpayRes.paymentUrl) {
+                        localStorage.removeItem("products_Checkout");
+                        window.location.href = vnpayRes.paymentUrl;
+                        return;
+                    }
+                } catch (vnpayErr) {
+                    console.error("VNPay error:", vnpayErr);
+                    alert("Failed to create VNPay payment. Your order has been created.");
+                }
             }
             
-        })
+            alert(orderRes.message);
+            localStorage.removeItem("products_Checkout");
+            window.location.href = "/order/history";
+        } catch (err) {
+            console.log(err.response);
+            if(err.response?.data?.error != null){
+                alert(err.response.data.error);
+            } else {
+                alert("Order failed!");
+            }
+        }
+        
+        setLoading(false);
     }
 
     useEffect( () => {
@@ -136,4 +173,4 @@ function Home(){
         </section>
     </>
     )
-}export default Home
+}export default Order

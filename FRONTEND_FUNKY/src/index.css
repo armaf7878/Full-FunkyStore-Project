@@ -24,6 +24,67 @@
   scrollbar-width: none;
 }
 
-#root{
+#root {
   background-color: #020B0A;
+  min-height: 100vh;
+}
+
+/* Glassmorphism Effect */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Premium Button States */
+.btn-premium {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-premium:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -10px rgba(33, 192, 154, 0.5);
+  filter: brightness(1.1);
+}
+
+.btn-premium:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn-premium:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Form Input Focus */
+.input-premium {
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.input-premium:focus {
+    border-color: rgba(33, 192, 154, 0.5);
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    box-shadow: 0 0 15px rgba(33, 192, 154, 0.1);
+    outline: none;
 }

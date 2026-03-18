@@ -1,8 +1,10 @@
-import { Admin_AllProducts } from "../../app/api";
+import { Admin_AllProducts, Admin_DeleteProduct, Admin_DeleteProductVariant } from "../../app/api";
 import { useEffect, useState } from "react";
 import ProductDetailModal from "./modal/ProductDetailModal";
 import EditProductModal from "./modal/EditProductModal";
 import CreateProductModal from "./modal/CreateProductModal";
+import { Modal, Button } from "../../components/admin";
+
 function Products (){
     const [products,setProducts] = useState([]);
     const [page,setPage] = useState(1);
@@ -11,12 +13,44 @@ function Products (){
     const [selectedProduct,setSelectedProduct] = useState(null);
     const [editProduct,setEditProduct] = useState(null);
     const [createProduct,setCreateProduct] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteType, setDeleteType] = useState(null);
+    const [deleteId, setDeleteId] = useState(null);
+
     const loadProducts = () =>{
         const query = `?page=${page}&search=${search}&sort=${sort}`;
         Admin_AllProducts(query).
         then((res) => setProducts(res.data))
         .catch((err) => console.log(err.response))
     }
+
+    const handleDeleteProduct = (productId) => {
+        setDeleteType('product');
+        setDeleteId(productId);
+        setShowDeleteConfirm(true);
+    };
+
+    const handleDeleteVariant = (variantId) => {
+        setDeleteType('variant');
+        setDeleteId(variantId);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = async () => {
+        try {
+            if (deleteType === 'product') {
+                await Admin_DeleteProduct(deleteId);
+                alert("Product deleted successfully!");
+            } else {
+                await Admin_DeleteProductVariant(deleteId);
+                alert("Variant deleted successfully!");
+            }
+            setShowDeleteConfirm(false);
+            loadProducts();
+        } catch (err) {
+            alert(err.response?.data?.error || err.response?.data?.message || "Delete failed");
+        }
+    };
 
     useEffect(() => {
         loadProducts();
@@ -121,10 +155,17 @@ function Products (){
                                     </button>
 
                                     <button
-                                        className="px-3 py-1 text-sm rounded bg-n-200 text-n-100"
+                                        className="px-3 py-1 mr-2 text-sm rounded bg-n-200 text-n-100"
                                         onClick={()=>setEditProduct(item._id)}
                                     >
                                         Edit
+                                    </button>
+
+                                    <button
+                                        className="px-3 py-1 text-sm rounded bg-red-600 text-white"
+                                        onClick={()=>handleDeleteProduct(item._id)}
+                                    >
+                                        Delete
                                     </button>
 
                                 </td>
@@ -181,6 +222,22 @@ function Products (){
                     onClose={()=>setCreateProduct(null)}
                 />
             )}
+
+            <Modal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                title="Confirm Delete"
+                size="sm"
+            >
+                <p className="text-n-100 mb-6">
+                    Are you sure you want to delete this {deleteType === 'product' ? 'product' : 'variant'}? 
+                    This action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+                    <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+                </div>
+            </Modal>
         </section>
 
     )

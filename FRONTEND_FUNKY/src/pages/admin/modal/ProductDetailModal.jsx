@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Admin_GetProductDetail, Admin_UpdateProductVariant } from "../../../app/api";
+import { Admin_GetProductDetail, Admin_UpdateProductVariant, Admin_DeleteProductVariant } from "../../../app/api";
+import Button from "../../../components/admin/Button";
 
 function ProductDetailModal({productId,onClose}){
 
@@ -61,6 +62,18 @@ function ProductDetailModal({productId,onClose}){
 
         }
 
+    };
+
+    const handleDeleteVariant = async (id) => {
+        if(window.confirm("Are you sure you want to delete this variant?")) {
+            try {
+                await Admin_DeleteProductVariant(id);
+                alert("Variant deleted!");
+                loadProduct();
+            } catch (err) {
+                alert(err.response?.data?.err || "Delete failed");
+            }
+        }
     };
 
     if(!data){
@@ -263,12 +276,23 @@ function ProductDetailModal({productId,onClose}){
 
                         ) : (
 
+                        <div className="flex gap-2">
+
                         <button
                         className="px-3 py-1 text-sm font-medium text-white bg-gray-600 rounded hover:bg-gray-500"
                         onClick={()=>handleEdit(variant)}
                         >
                         Edit
                         </button>
+
+                        <button
+                        className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-500"
+                        onClick={()=>handleDeleteVariant(variant._id)}
+                        >
+                        Delete
+                        </button>
+
+                        </div>
 
                         )}
 

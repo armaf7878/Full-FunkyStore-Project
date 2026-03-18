@@ -29,17 +29,22 @@ class UserController{
 
     //[POST] - api/user/login
     login(req, res){
+        console.log("=== LOGIN REQUEST ===");
+        console.log("Email:", req.body.email);
+        console.log("Password:", req.body.password);
+        
         if(!req.body.password){
             res.status(400).json("Missing Password !");
         }
         User.findOne({email: req.body.email})
         .then(async(user) => {
+            console.log("User found:", user ? user.email : "NOT FOUND");
             if(!user){
                 res.status(404).json("User Invalid !");
             }
             else{
                 const validPassword = await bcrypt.compare(req.body.password, user.password)
-                console.log(validPassword)
+                console.log("Password valid:", validPassword);
                 if(validPassword){
                     const accessToken = jwt.sign({
                         id: user._id,
@@ -49,13 +54,14 @@ class UserController{
                         {expiresIn: "2h"}
                     );
 
+                    console.log("Token generated:", accessToken.substring(0, 30) + "...");
                     res.status(200).json({data: accessToken});
                 }else{
                     res.status(400).json("Wrong Email Or Password");
                 }
             }
         })
-        .catch((err) => res.status(500).json({error: err.message}))
+        .catch((err) => res.status(500).json({error: err.message}));
     }
 }
 module.exports = new UserController();
